@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mumbai Explorer</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <style>
+        * {
+            box-sizing: border-box
+        }
+        
+        :root {
+            --primary: #075d6b;
+            --blue: #0b8da3;
+            --orange: #e67e22;
+            --red: #e74c3c;
+            --light: #edf5f7;
+            --muted: #607684;
+        }
+        
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background: var(--light);
+            color: #20323a;
+        }
+        
+        body {
+            overflow: hidden
+        }
+        
+        header {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            color: white;
+            background: linear-gradient(135deg, #075d6b, #0b8da3);
+            position: relative;
+            z-index: 1000;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 23px
+        }
+        
+        header p {
+            margin: 4px 0 0;
+            font-size: 12px;
+            opacity: .9
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        #language {
+            padding: 8px;
+            border: 0;
+            border-radius: 7px;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .logo {
+            padding: 8px 12px;
+            border-radius: 18px;
+            background: #ffffff25;
+            font-weight: bold;
+        }
+        
+        #map {
+            position: absolute;
+            top: 70px;
+            left: 0;
+            right: 420px;
+            bottom: 0;
+        }
+        
+        .sidebar {
+            position: absolute;
+            top: 70px;
+            right: 0;
+            width: 420px;
+            height: calc(100vh - 70px);
+            padding: 15px;
+            overflow-y: auto;
+            background: white;
+            box-shadow: -4px 0 16px #0002;
+            z-index: 500;
+        }
+        
+        .search input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccd8de;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        button {
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .location-btn {
+            width: 100%;
+            padding: 11px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--orange);
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            display: none;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--orange);
+            border-radius: 7px;
+            background: #fff4dc;
+            color: #704500;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        .tab {
+            flex: 0 0 auto;
+            padding: 8px 11px;
+            border: 1px solid #ccd8de;
+            border-radius: 20px;
+            background: white;
+            color: #36525d;
+            font-size: 12px;
+        }
+        
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 7px;
+            margin-bottom: 12px;
+        }
+        
+        .filters select {
+            width: 50%;
+            padding: 10px;
+            border: 1px solid #ccd8de;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .card {
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #e1eaed;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 2px 5px #0000000b;
+        }
+        
+        .card h3 {
+            margin: 5px 0 7px;
+            color: var(--primary);
+            font-size: 17px;
+        }
+        
+        .card p {
+            margin: 5px 0;
+            color: #405b66;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .badge,
+        .count {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .badge {
+            background: #e6f6f8;
+            color: var(--primary);
+        }
+        
+        .count {
+            margin-top: 5px;
+            background: #fff0d2;
+            color: #965600;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 7px;
+            margin-top: 10px;
+        }
+        
+        .small-btn {
+            flex: 1;
+            padding: 9px 6px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--blue);
+            color: white;
+            font-size: 12px;
+        }
+        
+        .route-btn {
+            background: var(--red);
+        }
+        
+        .selected-card {
+            border: 2px solid var(--primary);
+            background: #f4fcfd;
+        }
+        
+        .inline-details {
+            display: none;
+            margin-top: 13px;
+            padding: 14px;
+            border-left: 4px solid var(--blue);
+            border-radius: 8px;
+            background: #f2fbfd;
+            scroll-margin-top: 15px;
+        }
+        
+        .inline-details.open {
+            display: block;
+        }
+        
+        .inline-details h4 {
+            margin: 0 0 9px;
+            color: var(--primary);
+            font-size: 18px;
+        }
+        
+        .inline-details h5 {
+            margin: 13px 0 6px;
+            color: var(--primary);
+            font-size: 15px;
+        }
+        
+        .inline-details p {
+            margin: 7px 0;
+            color: #3c5965;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+        
+        .inline-details button {
+            width: 100%;
+            padding: 9px;
+            margin-top: 8px;
+            border: 0;
+            border-radius: 7px;
+            background: var(--blue);
+            color: white;
+        }
+        
+        .venue {
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #dce7e9;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .venue h5 {
+            margin: 0 0 7px;
+            color: var(--primary);
+        }
+        
+        .venue p {
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .tip {
+            padding: 9px;
+            border-radius: 7px;
+            background: #e9f8fa;
+            color: var(--primary);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .empty {
+            padding: 15px;
+            text-align: center;
+            color: var(--muted);
+        }
+        
+        .section-title {
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--blue);
+            color: var(--primary);
+        }
+        
+        .legend {
+            padding: 9px;
+            border-radius: 8px;
+            background: #fffffff2;
+            box-shadow: 0 1px 5px #0003;
+            font-size: 12px;
+            line-height: 1.7;
+        }
+        
+        .legend span {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            margin-right: 5px;
+            border-radius: 50%;
+        }
+        
+        @media(max-width:900px) {
+            body {
+                overflow: auto
+            }
+            header {
+                height: 64px;
+                padding: 0 12px;
+            }
+            header h1 {
+                font-size: 18px
+            }
+            header p {
+                font-size: 10px
+            }
+            .logo {
+                display: none
+            }
+            #map {
+                position: relative;
+                top: 0;
+                right: 0;
+                width: 100%;
+                height: 52vh;
+            }
+            .sidebar {
+                position: relative;
+                top: 0;
+                width: 100%;
+                height: auto;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <h1 id="title">📍 Mumbai Explorer</h1>
+            <p id="subtitle">Mumbai travel, festivals, food aur hotel guide</p>
+        </div>
+
+        <div class="header-right">
+            <select id="language">
+      <option value="hinglish">Hinglish</option>
+      <option value="hindi">हिन्दी</option>
+      <option value="marathi">मराठी</option>
+      <option value="english">English</option>
+    </select>
+
+            <div class="logo">मुंबई</div>
+        </div>
+    </header>
+
+    <div id="map"></div>
+
+    <aside class="sidebar">
+        <div class="search">
+            <input id="searchInput" type="search" placeholder="Mumbai me place search karein">
+        </div>
+
+        <button id="locationButton" class="location-btn">
+    📍 Meri Current Location Dhoondein
+  </button>
+
+        <div id="status" class="status"></div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="places">Places</button>
+            <button class="tab" data-tab="festivals">Festivals</button>
+            <button class="tab" data-tab="food">Food</button>
+            <button class="tab" data-tab="hotels">Hotels</button>
+            <button class="tab" data-tab="guide">Guide</button>
+        </div>
+
+        <div id="filterBox">
+            <div class="filters">
+                <select id="categoryFilter">
+        <option value="all">All categories</option>
+        <option value="historic">Historical</option>
+        <option value="beach">Beach</option>
+        <option value="religious">Religious</option>
+        <option value="nature">Nature</option>
+        <option value="museum">Museum</option>
+        <option value="market">Market</option>
+        <option value="viewpoint">Viewpoint</option>
+        <option value="tourist">Tourist</option>
+      </select>
+
+                <select id="monthFilter">
+        <option value="all">Any month</option>
+        <option value="1">January</option>
+        <option value="2">February</option>
+        <option value="3">March</option>
+        <option value="4">April</option>
+        <option value="5">May</option>
+        <option value="6">June</option>
+        <option value="7">July</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+            </div>
+        </div>
+
+        <div id="content"></div>
+    </aside>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        const places = [{
+            id: 1,
+            name: "Gateway of India",
+            category: "historic",
+            lat: 18.9220,
+            lng: 72.8347,
+            address: "Apollo Bandar, Colaba",
+            history: "Gateway of India ka foundation stone 1911 me rakha gaya aur monument 1924 me complete hua.",
+            description: "Mumbai ka iconic monument aur Elephanta ferry ka main point.",
+            bestTime: "Subah 7-10 ya shaam 4-7",
+            months: [10, 11, 12, 1, 2, 3],
+            fee: "Free; ferry ticket alag",
+            budget: "₹150-₹800",
+            food: "Colaba Causeway, cafes aur street food",
+            tip: "Ferry timing aur crowd pehle check karein."
+        }, {
+            id: 2,
+            name: "Marine Drive",
+            category: "viewpoint",
+            lat: 18.9430,
+            lng: 72.8238,
+            address: "Netaji Subhash Road, South Mumbai",
+            history: "Marine Drive Mumbai ka famous sea-facing boulevard aur Art Deco area hai.",
+            description: "Queen's Necklace, sunset aur night view ke liye best.",
+            bestTime: "Sunset ke baad 5-8",
+            months: [10, 11, 12, 1, 2, 3, 4],
+            fee: "Free",
+            budget: "₹100-₹600",
+            food: "Girgaum Chowpatty, pav bhaji aur bhel",
+            tip: "Weekend par crowd zyada hota hai."
+        }, {
+            id: 3,
+            name: "CSMT",
+            category: "historic",
+            lat: 18.9402,
+            lng: 72.8356,
+            address: "Chhatrapati Shivaji Maharaj Terminus, Fort",
+            history: "CSMT building 1887 me complete hui aur Victorian Gothic architecture ka example hai.",
+            description: "UNESCO World Heritage railway station aur heritage building.",
+            bestTime: "Subah ya evening lighting",
+            months: [10, 11, 12, 1, 2, 3],
+            fee: "Outside view free",
+            budget: "₹100-₹500",
+            food: "Fort cafes aur Crawford Market food",
+            tip: "Night lighting ke time photography best hoti hai."
+        }, {
+            id: 4,
+            name: "Elephanta Caves",
+            category: "historic",
+            lat: 18.9633,
+            lng: 72.9315,
+            address: "Elephanta Island, Mumbai Harbour",
+            history: "Ancient rock-cut caves me Shiva sculptures, temples aur Buddhist remains milte hain.",
+            description: "UNESCO World Heritage historical island destination.",
+            bestTime: "Subah 9-2",
+            months: [10, 11, 12, 1, 2, 3],
+            fee: "Ferry aur entry ticket",
+            budget: "₹500-₹1,200",
+            food: "Island par basic food",
+            tip: "Monday ko caves closed ho sakti hain."
+        }, {
+            id: 5,
+            name: "Juhu Beach",
+            category: "beach",
+            lat: 19.0988,
+            lng: 72.8267,
+            address: "Juhu Beach, Mumbai",
+            history: "Juhu Mumbai ke popular beach areas me se ek hai.",
+            description: "Sunset, street food aur local Mumbai atmosphere ke liye famous.",
+            bestTime: "Shaam 5-8",
+            months: [10, 11, 12, 1, 2, 3, 4],
+            fee: "Free",
+            budget: "₹150-₹800",
+            food: "Pav bhaji, bhel puri, kulfi aur sandwiches",
+            tip: "Monsoon me high tide se safe distance rakhein."
+        }, {
+            id: 6,
+            name: "Bandra Fort",
+            category: "historic",
+            lat: 19.0437,
+            lng: 72.8194,
+            address: "Bandstand Road, Bandra West",
+            history: "Portuguese period ka coastal fort.",
+            description: "Sea Link aur Arabian Sea photography ke liye best place.",
+            bestTime: "Subah ya sunset",
+            months: [10, 11, 12, 1, 2, 3, 4],
+            fee: "Free",
+            budget: "₹100-₹700",
+            food: "Bandra cafes aur Carter Road",
+            tip: "Bandra Bandstand ke saath visit karein."
+        }, {
+            id: 7,
+            name: "Siddhivinayak Temple",
+            category: "religious",
+            lat: 19.0169,
+            lng: 72.8306,
+            address: "Kakasaheb Gadgil Marg, Prabhadevi",
+            history: "Mumbai ka famous Lord Ganesha temple.",
+            description: "Devotees aur religious tourism ke liye important place.",
+            bestTime: "Weekday subah jaldi",
+            months: [1, 2, 3, 10, 11, 12],
+            fee: "Free",
+            budget: "₹100-₹500",
+            food: "Prabhadevi aur Dadar snacks",
+            tip: "Festival days me crowd bahut zyada hoti hai."
+        }, {
+            id: 8,
+            name: "Haji Ali Dargah",
+            category: "religious",
+            lat: 18.9827,
+            lng: 72.8089,
+            address: "Lala Lajpatrai Marg, Haji Ali, Worli",
+            history: "Sea ke beech located historic spiritual landmark.",
+            description: "Walkway, sea view aur architecture ke liye famous.",
+            bestTime: "Low tide aur shaam",
+            months: [10, 11, 12, 1, 2, 3, 4],
+            fee: "Free",
+            budget: "₹100-₹600",
+            food: "Haji Ali aur Worli food areas",
+            tip: "High tide par walkway accessible nahi ho sakta."
+        }, {
+            id: 9,
+            name: "Sanjay Gandhi National Park",
+            category: "nature",
+            lat: 19.2147,
+            lng: 72.9106,
+            address: "Borivali East, Mumbai",
+            history: "Mumbai ke andar located major urban national park.",
+            description: "Nature trails, wildlife aur Kanheri Caves ke liye famous.",
+            bestTime: "Subah 7:30 se dopahar",
+            months: [10, 11, 12, 1, 2, 3],
+            fee: "Entry ticket applicable",
+            budget: "₹300-₹1,000",
+            food: "Borivali food areas",
+            tip: "Water bottle aur comfortable shoes lekar jaen."
+        }, {
+            id: 10,
+            name: "Kanheri Caves",
+            category: "historic",
+            lat: 19.2075,
+            lng: 72.9063,
+            address: "Inside Sanjay Gandhi National Park",
+            history: "Ancient Buddhist monasteries aur rock-cut sculptures ka group.",
+            description: "History, archaeology aur nature lovers ke liye excellent.",
+            bestTime: "Subah 8 se dopahar 1",
+            months: [10, 11, 12, 1, 2, 3],
+            fee: "Park aur cave ticket",
+            budget: "₹300-₹900",
+            food: "Borivali East restaurants",
+            tip: "National Park ke andar located hai."
+        }, {
+            id: 11,
+            name: "CSMVS Museum",
+            category: "museum",
+            lat: 18.9269,
+            lng: 72.8311,
+            address: "Mahatma Gandhi Road, Kala Ghoda",
+            history: "Museum me Indian art, archaeology aur cultural collections hain.",
+            description: "History aur art students ke liye Mumbai ka best museum.",
+            bestTime: "Subah 10:30 se evening",
+            months: [10, 11, 12, 1, 2, 3, 4],
+            fee: "Ticket applicable",
+            budget: "₹300-₹900",
+            food: "Kala Ghoda cafes aur Fort restaurants",
+            tip: "Kala Ghoda Art District ke saath visit karein."
+        }, {
+            id: 12,
+            name: "Powai Lake",
+            category: "nature",
+            lat: 19.1307,
+            lng: 72.9056,
+            address: "Powai, Mumbai",
+            history: "Powai Lake northern Mumbai ka important water landmark hai.",
+            description: "Sunset, lakeside walk aur photography ke liye popular.",
+            bestTime: "Sunrise ya sunset",
+            months: [10, 11, 12, 1, 2, 3, 4],
+            fee: "Free viewpoints",
+            budget: "₹150-₹900",
+            food: "Hiranandani cafes aur restaurants",
+            tip: "Restricted areas me enter na karein."
+        }, {
+            id: 13,
+            name: "Colaba Causeway",
+            category: "market",
+            lat: 18.9225,
+            lng: 72.8314,
+            address: "Shahid Bhagat Singh Road, Colaba",
+            history: "South Mumbai ka heritage shopping district.",
+            description: "Street shopping, clothes, jewellery, souvenirs aur cafes.",
+            bestTime: "Late morning se evening",
+            months: [10, 11, 12, 1, 2, 3, 4],
+            fee: "Free",
+            budget: "₹300-₹3,000",
+            food: "Colaba cafes aur street food",
+            tip: "Bargaining zaroor karein."
+        }, {
+            id: 14,
+            name: "Hanging Gardens",
+            category: "nature",
+            lat: 18.9554,
+            lng: 72.8054,
+            address: "Malabar Hill, Mumbai",
+            history: "Mumbai ke historic public gardens me se ek.",
+            description: "Marine Drive aur skyline ka beautiful view.",
+            bestTime: "Subah ya sunset",
+            months: [10, 11, 12, 1, 2, 3, 4],
+            fee: "Free",
+            budget: "₹100-₹700",
+            food: "Malabar Hill aur Chowpatty",
+            tip: "Kamala Nehru Park ke saath visit karein."
+        }, {
+            id: 15,
+            name: "Carter Road Promenade",
+            category: "viewpoint",
+            lat: 19.0632,
+            lng: 72.8221,
+            address: "Carter Road, Bandra West",
+            history: "Bandra ka famous sea-facing promenade.",
+            description: "Walking, sunset aur cafes ke liye best.",
+            bestTime: "Shaam 5-9",
+            months: [10, 11, 12, 1, 2, 3, 4],
+            fee: "Free",
+            budget: "₹200-₹1,500",
+            food: "Carter Road cafes",
+            tip: "Weekend evening me crowd hota hai."
+        }, {
+            id: 16,
+            name: "Versova Beach",
+            category: "beach",
+            lat: 19.1300,
+            lng: 72.8150,
+            address: "Versova, Andheri West",
+            history: "Versova ek old fishing village area hai.",
+            description: "Sunset aur local coastal atmosphere.",
+            bestTime: "Subah ya sunset",
+            months: [10, 11, 12, 1, 2, 3],
+            fee: "Free",
+            budget: "₹150-₹800",
+            food: "Versova seafood restaurants",
+            tip: "Beach clean rakhein."
+        }, {
+            id: 17,
+            name: "Chor Bazaar",
+            category: "market",
+            lat: 18.9610,
+            lng: 72.8255,
+            address: "Mutton Street, Bhendi Bazaar",
+            history: "Mumbai ka old antique aur vintage market.",
+            description: "Antiques, old furniture aur unique shopping.",
+            bestTime: "Subah se afternoon",
+            months: [10, 11, 12, 1, 2, 3],
+            fee: "Free",
+            budget: "₹300-₹5,000+",
+            food: "Mohammed Ali Road",
+            tip: "Bargaining karein aur items check karein."
+        }, {
+            id: 18,
+            name: "Sewri Flamingo Point",
+            category: "nature",
+            lat: 19.0068,
+            lng: 72.8685,
+            address: "Sewri Mudflats, Sewri East",
+            history: "Sewri mudflats migratory flamingos ke liye famous hain.",
+            description: "Winter birdwatching aur photography ke liye best.",
+            bestTime: "Subah 6-9",
+            months: [11, 12, 1, 2, 3],
+            fee: "Free; rules apply",
+            budget: "₹100-₹700",
+            food: "Sewri aur Wadala",
+            tip: "Birds ko disturb na karein."
+        }, {
+            id: 19,
+            name: "Film City",
+            category: "tourist",
+            lat: 19.1628,
+            lng: 72.8847,
+            address: "Aarey Colony, Goregaon East",
+            history: "Film City Mumbai ka major film and television production complex hai.",
+            description: "Film sets aur guided Bollywood tours ke liye famous.",
+            bestTime: "Booked tour timing",
+            months: [1, 2, 3, 4, 5, 10, 11, 12],
+            fee: "Tour ticket applicable",
+            budget: "₹800-₹2,500",
+            food: "Goregaon aur Malad restaurants",
+            tip: "Entry authorised tour se hoti hai."
+        }];
+
+        const festivals = [{
+            id: "ganesh",
+            name: "Ganesh Chaturthi",
+            month: "August / September",
+            history: "Mumbai me public Ganesh festival tradition late 19th century me popular hua. Lalbaugcha Raja ka festival 1934 se celebrate hota aa raha hai.",
+            description: "Mumbai ka sabse famous festival. Pandal, darshan, aarti aur visarjan procession main attractions hain.",
+            tip: "Weekday morning best hota hai. Last days me crowd bahut zyada hota hai.",
+            venues: [
+                ["Lalbaugcha Raja", "GD Ambekar Marg, Lalbaug", 18.9915, 72.8377, "Currey Road / Chinchpokli", "Central Line ke baad walk/auto", "Famous idol aur grand pandal decoration", "₹200-₹800"],
+                ["Ganesh Galli Mumbaicha Raja", "Ganesh Galli, Lalbaug", 18.9910, 72.8390, "Currey Road / Chinchpokli", "Station se walk/auto", "Themed pandal aur artistic decoration", "₹200-₹700"],
+                ["GSB Seva Mandal", "King's Circle, Matunga", 19.0272, 72.8552, "King's Circle / Matunga", "Central Line ke baad auto", "Traditional rituals aur gold decoration", "₹200-₹900"],
+                ["Khetwadi Cha Ganraj", "Khetwadi, Girgaon", 18.9585, 72.8207, "Charni Road / Grant Road", "Walk/auto", "Tall idol aur themed pandals", "₹200-₹700"],
+                ["Andhericha Raja", "Veera Desai Road, Andheri West", 19.1364, 72.8337, "Andheri West Metro", "Metro ke baad auto", "Western suburbs ka famous pandal", "₹200-₹800"],
+                ["Girgaon Chowpatty Visarjan", "Girgaon Chowpatty, Marine Drive", 18.9548, 72.8122, "Charni Road", "Walking route", "Visarjan procession", "₹100-₹600"]
+            ]
+        }, {
+            id: "navratri",
+            name: "Navratri aur Dandiya",
+            month: "September / October",
+            history: "Mumbai me Navratri events community grounds aur ticketed venues par organize hote hain.",
+            description: "Garba, Dandiya, music aur traditional dress ka festival.",
+            tip: "Tickets, parking aur venue timing organizer se confirm karein.",
+            venues: [
+                ["NSCI Dome", "National Sports Club of India, Worli", 18.9878, 72.8145, "Mahalaxmi / Lower Parel", "Taxi/auto/cab", "Large ticketed Dandiya events", "₹500-₹2,500"],
+                ["Rangsharda Auditorium", "Bandra Reclamation, Bandra West", 19.0566, 72.8211, "Bandra", "Auto/cab", "Indoor Garba programmes", "₹300-₹1,500"],
+                ["Kora Kendra Ground", "Kora Kendra, Borivali West", 19.2307, 72.8567, "Borivali", "Western Line ke baad bus/auto", "Community Garba", "₹200-₹1,500"],
+                ["Ghatkopar Event Grounds", "Authorised grounds, Ghatkopar", 19.0860, 72.9082, "Ghatkopar", "Central Line/Metro", "Local Garba events", "₹200-₹1,200"]
+            ]
+        }, {
+            id: "diwali",
+            name: "Diwali",
+            month: "October / November",
+            history: "Diwali Mumbai me homes, markets, temples aur public areas me lights aur cultural events ke saath celebrate hoti hai.",
+            description: "Lights, diyas, rangoli, sweets aur shopping ka festival.",
+            tip: "Marine Drive aur Bandra public viewing ke liye useful hain.",
+            venues: [
+                ["Marine Drive Promenade", "Marine Drive", 18.9430, 72.8238, "Churchgate / Charni Road", "Western Line", "Lights aur sea view", "₹100-₹700"],
+                ["Bandra Bandstand", "Bandstand Promenade, Bandra West", 19.0437, 72.8194, "Bandra", "Auto/cab", "Sea-side festive walk", "₹100-₹800"],
+                ["Powai Lake", "Powai Lake area", 19.1307, 72.9056, "Kanjurmarg / Saki Naka", "Metro/auto", "Lakeside lights", "₹150-₹900"],
+                ["Gateway of India", "Apollo Bandar, Colaba", 18.9220, 72.8347, "Churchgate", "Taxi/bus", "Heritage lighting", "₹200-₹1,000"]
+            ]
+        }, {
+            id: "ramzan",
+            name: "Ramzan aur Eid",
+            month: "Islamic lunar calendar",
+            history: "Mohammed Ali Road aur Bhendi Bazaar Ramzan food aur community gatherings ke liye famous hain.",
+            description: "Iftar food, kebabs, biryani, desserts aur night market.",
+            tip: "Iftar ke baad crowd hota hai. Comfortable shoes aur UPI rakhein.",
+            venues: [
+                ["Mohammed Ali Road", "Bhendi Bazaar", 18.9551, 72.8293, "Masjid Bunder", "Train ke baad walk/auto", "Kebab, biryani aur desserts", "₹300-₹1,200"],
+                ["Minara Masjid Area", "Mohammad Ali Road", 18.9565, 72.8299, "Masjid Bunder", "Walking/auto", "Lights aur food stalls", "₹300-₹1,000"],
+                ["Jama Masjid", "Mandvi, Crawford Market", 18.9475, 72.8310, "CSMT / Masjid Bunder", "Train/bus/auto", "Eid prayers aur market", "₹200-₹900"],
+                ["Haji Ali Dargah", "Haji Ali, Worli", 18.9827, 72.8089, "Mahalaxmi", "Taxi/auto", "Spiritual visit", "₹100-₹700"]
+            ]
+        }, {
+            id: "christmas",
+            name: "Christmas",
+            month: "December",
+            history: "Bandra, Fort aur Mahim ke historic churches Christmas services aur decorations ke liye popular hain.",
+            description: "Church decoration, midnight mass, lights aur carols.",
+            tip: "Midnight Mass ka official timing check karein.",
+            venues: [
+                ["Mount Mary Basilica", "Mount Mary Road, Bandra", 19.0466, 72.8218, "Bandra", "Auto/cab", "Midnight Mass aur carols", "₹100-₹700"],
+                ["St. Thomas Cathedral", "Horniman Circle, Fort", 18.9320, 72.8347, "Churchgate", "Walk/auto", "Historic church service", "₹100-₹700"],
+                ["St. Michael's Church", "Mahim Causeway", 19.0411, 72.8406, "Mahim", "Auto/walk", "Mass, choir aur decoration", "₹100-₹700"]
+            ]
+        }, {
+            id: "holi",
+            name: "Holi",
+            month: "March",
+            history: "Mumbai me Holi residential communities, clubs aur authorised ticketed events me celebrate hoti hai.",
+            description: "Colours, music aur cultural events.",
+            tip: "Authorised event choose karein aur skin-safe colours use karein.",
+            venues: [
+                ["Juhu Beach Event Zone", "Juhu Beach", 19.0988, 72.8267, "Vile Parle", "Auto/cab", "Organised Holi events", "₹300-₹2,000"],
+                ["Powai Event Grounds", "Authorised grounds, Powai", 19.1307, 72.9056, "Saki Naka/Kanjurmarg", "Metro/auto", "Music aur colour events", "₹500-₹3,000"],
+                ["Goregaon Event Grounds", "Authorised venues, Goregaon", 19.1663, 72.8526, "Goregaon", "Western Line", "Music, colours aur food", "₹300-₹2,000"]
+            ]
+        }];
+
+        const foodPlaces = [
+            ["Juhu Food Area", "Juhu Beach", 19.0988, 72.8267, "Pav bhaji, bhel, sev puri, kulfi", "₹150-₹800", "Vile Parle"],
+            ["Girgaon Chowpatty", "Girgaum Chowpatty", 18.9548, 72.8122, "Pav bhaji, bhel, pani puri", "₹150-₹700", "Charni Road"],
+            ["Mohammed Ali Road", "Bhendi Bazaar", 18.9551, 72.8293, "Kebab, biryani, nihari, falooda", "₹300-₹1,200", "Masjid Bunder"],
+            ["Matunga Food Area", "Matunga", 19.0269, 72.8552, "Dosa, idli, vada, filter coffee", "₹150-₹600", "King's Circle"],
+            ["Bandra Cafe Area", "Carter Road/Bandstand", 19.0600, 72.8360, "Cafes, pizza, burgers, desserts", "₹400-₹1,500", "Bandra"],
+            ["Fort Heritage Cafes", "Fort/Kala Ghoda", 18.9320, 72.8347, "Irani cafes, bakeries, coffee", "₹300-₹1,200", "Churchgate/CSMT"]
+        ];
+
+        const hotels = [
+            ["Colaba Stay Area", "Colaba", 18.9220, 72.8347, "₹1,500-₹10,000+", "Gateway, CSMT, Colaba", "Churchgate se taxi/bus"],
+            ["Bandra Stay Area", "Bandra West", 19.0600, 72.8360, "₹2,500-₹12,000+", "Bandra, Juhu, cafes", "Bandra station/Metro"],
+            ["Andheri Stay Area", "Andheri", 19.1197, 72.8468, "₹1,500-₹8,000", "Airport, Juhu, Film City", "Andheri station/Metro"],
+            ["Dadar-Parel Stay Area", "Dadar, Parel, Prabhadevi", 19.0178, 72.8478, "₹1,200-₹7,000", "Siddhivinayak, central Mumbai", "Dadar station"],
+            ["Powai Stay Area", "Powai", 19.1307, 72.9056, "₹2,000-₹10,000", "Powai Lake, airport side", "Metro/auto/cab"],
+            ["Borivali Stay Area", "Borivali", 19.2307, 72.8567, "₹1,000-₹5,000", "National Park, Kanheri Caves", "Borivali station"]
+        ];
+
+        const map = L.map("map", {
+            minZoom: 10,
+            maxZoom: 18,
+            maxBounds: [
+                [18.75, 72.70],
+                [19.35, 73.10]
+            ],
+            maxBoundsViscosity: .8
+        }).setView([19.0760, 72.8777], 11);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors"
+        }).addTo(map);
+
+        const markerLayer = L.layerGroup().addTo(map);
+
+        let currentLocation = null;
+        let currentMarker = null;
+        let routeLine = null;
+        let activeTab = "places";
+
+        const content = document.getElementById("content");
+        const searchInput = document.getElementById("searchInput");
+        const categoryFilter = document.getElementById("categoryFilter");
+        const monthFilter = document.getElementById("monthFilter");
+        const filterBox = document.getElementById("filterBox");
+        const statusBox = document.getElementById("status");
+
+        function showStatus(message) {
+            statusBox.style.display = "block";
+            statusBox.innerHTML = message;
+        }
+
+        function monthNames(months) {
+            const names = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            return months.map(m => names[m]).join(", ");
+        }
+
+        function categoryColor(category) {
+            return {
+                historic: "#8e44ad",
+                tourist: "#e67e22",
+                beach: "#2980b9",
+                religious: "#c0392b",
+                nature: "#27ae60",
+                museum: "#16a085",
+                viewpoint: "#34495e",
+                market: "#d35400"
+            }[category] || "#087f8c";
+        }
+
+        function createPlaceMarker(place) {
+            const icon = L.divIcon({
+                className: "",
+                iconSize: [28, 28],
+                iconAnchor: [14, 28],
+                html: `
+      <div style="
+        width:28px;
+        height:28px;
+        border-radius:50% 50% 50% 0;
+        transform:rotate(-45deg);
+        background:${categoryColor(place.category)};
+        border:3px solid white;
+        box-shadow:0 2px 7px rgba(0,0,0,.45)
+      ">
+        <div style="
+          transform:rotate(45deg);
+          text-align:center;
+          color:white;
+          line-height:22px
+        ">📍</div>
+      </div>
+    `
+            });
+
+            const marker = L.marker([place.lat, place.lng], {
+                icon
+            });
+            marker.bindTooltip(place.name);
+            marker.on("click", () => {
+                map.setView([place.lat, place.lng], 15);
+            });
+            return marker;
+        }
+
+        function getFilteredPlaces() {
+            const query = searchInput.value.toLowerCase().trim();
+            const category = categoryFilter.value;
+            const month = monthFilter.value;
+
+            return places.filter(place => {
+                const matchesText =
+                    `${place.name} ${place.address} ${place.description}`
+                    .toLowerCase()
+                    .includes(query);
+
+                const matchesCategory =
+                    category === "all" || place.category === category;
+
+                const matchesMonth =
+                    month === "all" || place.months.includes(Number(month));
+
+                return matchesText && matchesCategory && matchesMonth;
+            });
+        }
+
+        function placeDetailsHTML(place) {
+            return `
+    <div class="inline-details open">
+      <h4>${place.name}</h4>
+      <p><strong>Category:</strong> ${place.category}</p>
+      <p><strong>Address:</strong> ${place.address}</p>
+      <p><strong>History:</strong> ${place.history}</p>
+      <p>${place.description}</p>
+      <p><strong>Best time:</strong> ${place.bestTime}</p>
+      <p><strong>Best months:</strong> ${monthNames(place.months)}</p>
+      <p><strong>Entry:</strong> ${place.fee}</p>
+      <p><strong>Estimated budget:</strong> ${place.budget}</p>
+      <p><strong>Nearby food:</strong> ${place.food}</p>
+      <p><strong>Tourist tip:</strong> ${place.tip}</p>
+      <button class="close-details">Details band karein</button>
+    </div>
+  `;
+        }
+
+        function renderPlaces() {
+            markerLayer.clearLayers();
+            content.innerHTML = "";
+
+            const list = getFilteredPlaces();
+
+            list.forEach(place => {
+                const marker = createPlaceMarker(place);
+                marker.addTo(markerLayer);
+
+                const card = document.createElement("article");
+                card.className = "card place-card";
+
+                card.innerHTML = `
+      <span class="badge">${place.category}</span>
+      <h3>${place.name}</h3>
+      <p><strong>Location:</strong> ${place.address}</p>
+      <p>${place.description}</p>
+      <p><strong>Budget:</strong> ${place.budget}</p>
+
+      <div class="actions">
+        <button class="small-btn details-btn">Details</button>
+        <button class="small-btn route-btn route-btn-action">Route</button>
+      </div>
+
+      <div class="place-details-container"></div>
+    `;
+
+                const detailsContainer =
+                    card.querySelector(".place-details-container");
+
+                card.querySelector(".details-btn").addEventListener("click", () => {
+                    const isOpen = detailsContainer.classList.contains("open");
+
+                    document.querySelectorAll(".place-details-container").forEach(box => {
+                        box.classList.remove("open");
+                        box.innerHTML = "";
+                    });
+
+                    document.querySelectorAll(".place-card").forEach(item => {
+                        item.classList.remove("selected-card");
+                    });
+
+                    if (!isOpen) {
+                        detailsContainer.innerHTML = placeDetailsHTML(place);
+                        detailsContainer.classList.add("open");
+                        card.classList.add("selected-card");
+
+                        map.setView([place.lat, place.lng], 15);
+
+                        detailsContainer.querySelector(".close-details").onclick = () => {
+                            detailsContainer.classList.remove("open");
+                            detailsContainer.innerHTML = "";
+                            card.classList.remove("selected-card");
+                        };
+
+                        setTimeout(() => {
+                            detailsContainer.scrollIntoView({
+                                behavior: "smooth",
+                                block: "nearest"
+                            });
+                        }, 100);
+                    }
+                });
+
+                card.querySelector(".route-btn-action").addEventListener("click", () => {
+                    calculateRoute(place.id);
+                });
+
+                content.appendChild(card);
+            });
+
+            if (!list.length) {
+                content.innerHTML = `<div class="empty">Koi place nahi mila.</div>`;
+            }
+        }
+
+        function createFestivalMarker(festival, venue) {
+            const icon = L.divIcon({
+                className: "",
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                html: `
+      <div style="
+        width:32px;
+        height:32px;
+        border-radius:50% 50% 50% 0;
+        transform:rotate(-45deg);
+        background:#f39c12;
+        border:3px solid white
+      ">
+        <div style="
+          transform:rotate(45deg);
+          color:white;
+          text-align:center;
+          line-height:26px
+        ">🎉</div>
+      </div>
+    `
+            });
+
+            const marker = L.marker([venue[2], venue[3]], {
+                icon
+            });
+            marker.bindPopup(`
+    <strong>🎉 ${festival.name}</strong><br>
+    <b>${venue[0]}</b><br>
+    ${venue[1]}
+  `);
+
+            marker.addTo(markerLayer);
+        }
+
+        function festivalDetailsHTML(festival) {
+            const venues = festival.venues.map((venue, index) => `
+    <div class="venue">
+      <h5>📍 ${index+1}. ${venue[0]}</h5>
+      <p><strong>Exact location:</strong> ${venue[1]}</p>
+      <p><strong>Nearest station:</strong> ${venue[4]}</p>
+      <p><strong>How to reach:</strong> ${venue[5]}</p>
+      <p><strong>What to see:</strong> ${venue[6]}</p>
+      <p><strong>Estimated budget:</strong> ${venue[7]}</p>
+      <button onclick="focusVenue(${venue[2]},${venue[3]},'${venue[0]}')">
+        🗺️ Map par dekhein
+      </button>
+    </div>
+  `).join("");
+
+            return `
+    <div class="inline-details open">
+      <h4>🎉 ${festival.name}</h4>
+      <p><strong>Month:</strong> ${festival.month}</p>
+      <p><strong>History:</strong> ${festival.history}</p>
+      <p>${festival.description}</p>
+
+      <div class="tip">
+        <strong>Tourist tip:</strong><br>
+        ${festival.tip}
+      </div>
+
+      <h5>📍 Exact famous locations</h5>
+      ${venues}
+
+      <button class="close-details">
+        Details band karein
+      </button>
+    </div>
+  `;
+        }
+
+        function renderFestivals() {
+            markerLayer.clearLayers();
+            content.innerHTML = "";
+
+            festivals.forEach(festival => {
+                const card = document.createElement("article");
+                card.className = "card festival-card";
+
+                card.innerHTML = `
+      <span class="badge">${festival.month}</span>
+      <h3>🎉 ${festival.name}</h3>
+      <span class="count">${festival.venues.length} exact locations</span>
+      <p>${festival.description}</p>
+
+      <button class="small-btn festival-details-btn" style="width:100%;margin-top:8px">
+        📍 Locations aur details
+      </button>
+
+      <div class="festival-details-container"></div>
+    `;
+
+                const box = card.querySelector(".festival-details-container");
+
+                card.querySelector(".festival-details-btn").onclick = () => {
+                    const isOpen = box.classList.contains("open");
+
+                    document.querySelectorAll(".festival-details-container").forEach(item => {
+                        item.classList.remove("open");
+                        item.innerHTML = "";
+                    });
+
+                    document.querySelectorAll(".festival-card").forEach(item => {
+                        item.classList.remove("selected-card");
+                    });
+
+                    if (!isOpen) {
+                        box.innerHTML = festivalDetailsHTML(festival);
+                        box.classList.add("open");
+                        card.classList.add("selected-card");
+
+                        festival.venues.forEach(venue => {
+                            createFestivalMarker(festival, venue);
+                        });
+
+                        map.fitBounds(
+                            festival.venues.map(venue => [venue[2], venue[3]]), {
+                                padding: [35, 35]
+                            }
+                        );
+
+                        box.querySelector(".close-details").onclick = () => {
+                            box.classList.remove("open");
+                            box.innerHTML = "";
+                            card.classList.remove("selected-card");
+                        };
+
+                        setTimeout(() => {
+                            box.scrollIntoView({
+                                behavior: "smooth",
+                                block: "nearest"
+                            });
+                        }, 100);
+                    }
+                };
+
+                content.appendChild(card);
+            });
+        }
+
+        function renderFood() {
+            markerLayer.clearLayers();
+            content.innerHTML = "<h2 class='section-title'>🍽️ Mumbai Food Areas</h2>";
+
+            foodPlaces.forEach(food => {
+                const [name, address, lat, lng, dishes, budget, nearest] = food;
+
+                const marker = L.marker([lat, lng])
+                    .addTo(markerLayer)
+                    .bindPopup(`<strong>🍽️ ${name}</strong><br>${address}`);
+
+                const card = document.createElement("article");
+                card.className = "card";
+
+                card.innerHTML = `
+      <span class="badge">Food Area</span>
+      <h3>${name}</h3>
+      <p><strong>Location:</strong> ${address}</p>
+      <p><strong>Popular food:</strong> ${dishes}</p>
+      <p><strong>Budget:</strong> ${budget}</p>
+      <p><strong>Nearest:</strong> ${nearest}</p>
+      <button class="small-btn" style="width:100%;margin-top:8px">
+        📍 Map par dekhein
+      </button>
+    `;
+
+                card.querySelector("button").onclick = () => {
+                    map.setView([lat, lng], 15);
+                    marker.openPopup();
+                };
+
+                content.appendChild(card);
+            });
+        }
+
+        function renderHotels() {
+            markerLayer.clearLayers();
+            content.innerHTML = `
+    <h2 class="section-title">🏨 Mumbai Hotel Areas</h2>
+    <div class="tip">
+      Hotel prices estimated hain. Weekend, festival aur season me rates change ho sakte hain.
+    </div>
+  `;
+
+            hotels.forEach(hotel => {
+                const [name, address, lat, lng, budget, bestFor, transport] = hotel;
+
+                const marker = L.marker([lat, lng])
+                    .addTo(markerLayer)
+                    .bindPopup(`<strong>🏨 ${name}</strong><br>${address}`);
+
+                const card = document.createElement("article");
+                card.className = "card";
+
+                card.innerHTML = `
+      <span class="badge">Hotel Area</span>
+      <h3>${name}</h3>
+      <p><strong>Location:</strong> ${address}</p>
+      <p><strong>Budget:</strong> ${budget}</p>
+      <p><strong>Best for:</strong> ${bestFor}</p>
+      <p><strong>Transport:</strong> ${transport}</p>
+      <button class="small-btn" style="width:100%;margin-top:8px">
+        📍 Map par dekhein
+      </button>
+    `;
+
+                card.querySelector("button").onclick = () => {
+                    map.setView([lat, lng], 15);
+                    marker.openPopup();
+                };
+
+                content.appendChild(card);
+            });
+        }
+
+        function renderGuide() {
+            markerLayer.clearLayers();
+
+            content.innerHTML = `
+    <h2 class="section-title">🧭 Mumbai Tourist Guide</h2>
+
+    <article class="card">
+      <h3>📅 Best time</h3>
+      <p><strong>October-February:</strong> Sightseeing ke liye best weather.</p>
+      <p><strong>March-May:</strong> Garmi; beaches evening me visit karein.</p>
+      <p><strong>June-September:</strong> Monsoon aur greenery beautiful hoti hai.</p>
+    </article>
+
+    <article class="card">
+      <h3>🗺️ One-day plan</h3>
+      <p>Gateway of India, Colaba, CSMT, Kala Ghoda, Marine Drive aur Chowpatty.</p>
+    </article>
+
+    <article class="card">
+      <h3>🚆 Transport</h3>
+      <p>Local train, Metro, BEST bus, taxi, auto aur app cabs available hain.</p>
+    </article>
+
+    <article class="card">
+      <h3>⚠️ Safety</h3>
+      <p>Crowded places me wallet aur phone ka dhyan rakhein.</p>
+      <p>Monsoon me sea warning areas se door rahein.</p>
+      <p>Religious places ke local rules follow karein.</p>
+    </article>
+  `;
+        }
+
+        function setTab(tabName) {
+            activeTab = tabName;
+
+            document.querySelectorAll(".tab").forEach(tab => {
+                tab.classList.toggle("active", tab.dataset.tab === tabName);
+            });
+
+            document.getElementById("filterBox").style.display =
+                tabName === "places" ? "block" : "none";
+
+            if (tabName === "places") renderPlaces();
+            if (tabName === "festivals") renderFestivals();
+            if (tabName === "food") renderFood();
+            if (tabName === "hotels") renderHotels();
+            if (tabName === "guide") renderGuide();
+        }
+
+        function updateLanguage() {
+            const selected = language.value;
+
+            const translations = {
+                hinglish: {
+                    title: "📍 Mumbai Explorer",
+                    subtitle: "Mumbai travel, festivals, food aur hotel guide",
+                    search: "Mumbai me place search karein",
+                    location: "📍 Meri Current Location Dhoondein",
+                    places: "Places",
+                    festivals: "Festivals",
+                    food: "Food",
+                    hotels: "Hotels",
+                    guide: "Guide"
+                },
+                hindi: {
+                    title: "📍 मुंबई एक्सप्लोरर",
+                    subtitle: "मुंबई यात्रा, त्योहार, भोजन और होटल गाइड",
+                    search: "मुंबई में स्थान खोजें",
+                    location: "📍 मेरी वर्तमान लोकेशन खोजें",
+                    places: "स्थान",
+                    festivals: "त्योहार",
+                    food: "भोजन",
+                    hotels: "होटल",
+                    guide: "गाइड"
+                },
+                marathi: {
+                    title: "📍 मुंबई एक्सप्लोरर",
+                    subtitle: "मुंबई प्रवास, सण, खाद्यपदार्थ आणि हॉटेल मार्गदर्शक",
+                    search: "मुंबईतील ठिकाणे शोधा",
+                    location: "📍 माझे सध्याचे स्थान शोधा",
+                    places: "ठिकाणे",
+                    festivals: "सण",
+                    food: "खाद्यपदार्थ",
+                    hotels: "हॉटेल्स",
+                    guide: "मार्गदर्शक"
+                },
+                english: {
+                    title: "📍 Mumbai Explorer",
+                    subtitle: "Mumbai travel, festivals, food and hotel guide",
+                    search: "Search Mumbai places",
+                    location: "📍 Find My Current Location",
+                    places: "Places",
+                    festivals: "Festivals",
+                    food: "Food",
+                    hotels: "Hotels",
+                    guide: "Guide"
+                }
+            };
+
+            const t = translations[selected];
+
+            document.getElementById("title").textContent = t.title;
+            document.getElementById("subtitle").textContent = t.subtitle;
+            searchInput.placeholder = t.search;
+            locationButton.textContent = t.location;
+
+            document.querySelector('[data-tab="places"]').textContent = t.places;
+            document.querySelector('[data-tab="festivals"]').textContent = t.festivals;
+            document.querySelector('[data-tab="food"]').textContent = t.food;
+            document.querySelector('[data-tab="hotels"]').textContent = t.hotels;
+            document.querySelector('[data-tab="guide"]').textContent = t.guide;
+        }
+
+        function getLocation() {
+            if (!navigator.geolocation) {
+                showStatus("Aapka browser GPS support nahi karta.");
+                return;
+            }
+
+            showStatus("Current location find ki ja rahi hai...");
+
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    currentLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+
+                    if (currentMarker) {
+                        map.removeLayer(currentMarker);
+                    }
+
+                    currentMarker = L.marker([
+                            currentLocation.lat,
+                            currentLocation.lng
+                        ])
+                        .addTo(map)
+                        .bindPopup("📍 Aapki current location")
+                        .openPopup();
+
+                    map.setView([
+                        currentLocation.lat,
+                        currentLocation.lng
+                    ], 14);
+
+                    showStatus("Aapki current location map par show ho rahi hai.");
+                },
+                () => {
+                    showStatus("Location permission allow karein.");
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        async function calculateRoute(placeId) {
+            const place = places.find(item => item.id === placeId);
+
+            if (!place) return;
+
+            if (!currentLocation) {
+                showStatus("Route ke liye pehle current location button press karein.");
+                return;
+            }
+
+            try {
+                showStatus("Route calculate ho raha hai...");
+
+                const start = `${currentLocation.lng},${currentLocation.lat}`;
+                const end = `${place.lng},${place.lat}`;
+
+                const url =
+                    `https://router.project-osrm.org/route/v1/driving/` +
+                    `${start};${end}?overview=full&geometries=geojson`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data.routes || !data.routes.length) {
+                    showStatus("Route nahi mila.");
+                    return;
+                }
+
+                const route = data.routes[0];
+
+                if (routeLine) {
+                    map.removeLayer(routeLine);
+                }
+
+                routeLine = L.geoJSON(route.geometry, {
+                    style: {
+                        color: "#e74c3c",
+                        weight: 6,
+                        opacity: .9
+                    }
+                }).addTo(map);
+
+                map.fitBounds(routeLine.getBounds(), {
+                    padding: [30, 30]
+                });
+
+                const distance = (route.distance / 1000).toFixed(1);
+                const time = Math.round(route.duration / 60);
+
+                showStatus(
+                    `<strong>${place.name}</strong><br>` +
+                    `Distance: ${distance} km<br>` +
+                    `Estimated time: ${time} minutes`
+                );
+            } catch (error) {
+                showStatus("Route service temporarily unavailable hai.");
+            }
+        }
+
+        function focusVenue(lat, lng, name) {
+            map.setView([lat, lng], 16);
+
+            L.popup()
+                .setLatLng([lat, lng])
+                .setContent(`<strong>📍 ${name}</strong>`)
+                .openOn(map);
+        }
+
+        document.querySelectorAll(".tab").forEach(tab => {
+            tab.addEventListener("click", () => {
+                setTab(tab.dataset.tab);
+            });
+        });
+
+        searchInput.addEventListener("input", () => {
+            if (activeTab === "places") renderPlaces();
+        });
+
+        categoryFilter.addEventListener("change", () => {
+            if (activeTab === "places") renderPlaces();
+        });
+
+        monthFilter.addEventListener("change", () => {
+            if (activeTab === "places") renderPlaces();
+        });
+
+        document.getElementById("language").addEventListener("change", updateLanguage);
+        document.getElementById("locationButton").addEventListener("click", getLocation);
+
+        const legend = L.control({
+            position: "bottomleft"
+        });
+
+        legend.onAdd = function() {
+            const div = L.DomUtil.create("div", "legend");
+
+            div.innerHTML = `
+    <strong>Categories</strong><br>
+    <span style="background:#8e44ad"></span> Historical<br>
+    <span style="background:#2980b9"></span> Beach<br>
+    <span style="background:#27ae60"></span> Nature<br>
+    <span style="background:#c0392b"></span> Religious<br>
+    <span style="background:#f39c12"></span> Festival
+  `;
+
+            return div;
+        };
+
+        legend.addTo(map);
+        renderPlaces();
+    </script>
+
+</body>
+
+</html>
